@@ -3,6 +3,9 @@
 
 #include "DolphinQt/Debugger/MemoryWidget.h"
 
+#include <fstream>
+#include <iostream>
+
 #include <limits>
 #include <optional>
 #include <string>
@@ -23,20 +26,28 @@
 #include <QScrollArea>
 #include <QSpacerItem>
 #include <QSplitter>
+#include <QString>
 #include <QTableWidget>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include "Common/BitUtils.h"
+#include "Common/CommonTypes.h"
 #include "Common/FileUtil.h"
 #include "Common/IOFile.h"
+#include "Common/Logging/Log.h"
 #include "Core/ConfigManager.h"
 #include "Core/Core.h"
 #include "Core/HW/AddressSpace.h"
+#include "Core/PowerPC/FrameHeat.h"
+#include "Core/PowerPC/JitInterface.h"
+#include "Core/PowerPC/Profiler.h"
 #include "Core/System.h"
 #include "DolphinQt/Debugger/MemoryViewWidget.h"
 #include "DolphinQt/Host.h"
 #include "DolphinQt/QtUtils/ModalMessageBox.h"
 #include "DolphinQt/Settings.h"
+#include "Core/PowerPC/PPCSymbolDB.h"
 
 using Type = MemoryViewWidget::Type;
 
@@ -151,10 +162,16 @@ void MemoryWidget::CreateWidgets()
 
   m_find_next = new QPushButton(tr("Find &Next"));
   m_find_previous = new QPushButton(tr("Find &Previous"));
+  m_toggle_prof = new QPushButton(QStringLiteral("toggle profiling"));
+  m_write_prof = new QPushButton(QStringLiteral("write profile"));
+  m_make_funcfh_maps = new QPushButton(QStringLiteral("make funcfh maps"));
   m_result_label = new QLabel;
 
   search_layout->addWidget(m_find_next);
   search_layout->addWidget(m_find_previous);
+  search_layout->addWidget(m_toggle_prof);
+  search_layout->addWidget(m_write_prof);
+  search_layout->addWidget(m_make_funcfh_maps);
   search_layout->addWidget(m_result_label);
   search_layout->setSpacing(1);
 
@@ -303,6 +320,11 @@ void MemoryWidget::CreateWidgets()
 
 void MemoryWidget::ConnectWidgets()
 {
+  // update approximately every frame (16ms)
+  auto timer = new QTimer(this);
+  connect(timer, &QTimer::timeout, this, &MemoryWidget::UpdateProfilingStatus);
+  timer->start(16);
+
   connect(m_search_address, &QComboBox::currentTextChanged, this, &MemoryWidget::OnSearchAddress);
   connect(m_search_offset, &QLineEdit::textChanged, this, &MemoryWidget::OnSearchAddress);
   connect(m_data_edit, &QLineEdit::textChanged, this, &MemoryWidget::ValidateAndPreviewInputValue);
@@ -313,6 +335,9 @@ void MemoryWidget::ConnectWidgets()
 
   connect(m_find_next, &QPushButton::clicked, this, &MemoryWidget::OnFindNextValue);
   connect(m_find_previous, &QPushButton::clicked, this, &MemoryWidget::OnFindPreviousValue);
+  connect(m_toggle_prof, &QPushButton::clicked, this, &MemoryWidget::OnToggleProfiling);
+  connect(m_write_prof, &QPushButton::clicked, this, &MemoryWidget::OnWriteProfile);
+  connect(m_make_funcfh_maps, &QPushButton::clicked, this, &MemoryWidget::OnMakeFuncfhMaps);
 
   for (auto* radio :
        {m_address_space_effective, m_address_space_auxiliary, m_address_space_physical})
@@ -864,4 +889,64 @@ void MemoryWidget::OnFindNextValue()
 void MemoryWidget::OnFindPreviousValue()
 {
   FindValue(false);
+}
+
+void MemoryWidget::OnMakeFuncfhMaps() {
+  FrameHeatMap::MakeRealMaps();
+}
+
+void MemoryWidget::UpdateProfilingStatus()
+{
+  auto profile_status = Core::System::GetInstance().GetJitInterface().GetProfilingState();
+  m_result_label->setText(QStringLiteral("Profiling is: %1").arg(QString::fromStdString(profile_status)));
+}
+
+void MemoryWidget::OnWriteProfile()
+{
+  Profiler::ProfileStats prof_stats;
+  const auto& blockstats = prof_stats.block_stats;
+  Core::System::GetInstance().GetJitInterface().GetProfileResults(&prof_stats);
+  
+  if (blockstats.empty()) {
+    NOTICE_LOG_FMT(POWERPC, "noblock! :(");
+    return;
+  }
+
+  auto fhm = FrameHeatMap::GetFuncFHMap();
+  if (!fhm.has_value())
+  {
+    NOTICE_LOG_FMT(POWERPC, "No real map! click the button first.");
+    return;
+  }
+  auto fnm = fhm.value();
+  NOTICE_LOG_FMT(POWERPC, "got fnm, it's {} big! wow!", fnm->size());
+
+  std::ofstream oaf("/Users/ishanchawla/Desktop/tsetframeheat.csv");
+  if (!oaf) 
+  {
+    NOTICE_LOG_FMT(POWERPC, "cannot open oaf file!");
+    return;
+  }
+
+  for (auto& [fAddr, hm] : *fnm)
+  {
+    const auto func_name = g_symbolDB.GetDescription(fAddr);
+    oaf << fmt::format("{}, {:#x}, {}", func_name, fAddr, hm.TotalHeat());
+    for (const auto& [frame, heat] : hm)
+    {
+      oaf << fmt::format("{}, {}, ", frame, heat);
+    }
+    oaf << std::endl;
+  }
+  oaf.close();
+  NOTICE_LOG_FMT(OSREPORT, "created oaf file!");
+
+  Core::System::GetInstance().GetJitInterface().WriteProfileResults("/Users/ishanchawla/Desktop/tset.txt");
+
+
+}
+
+void MemoryWidget::OnToggleProfiling()
+{
+  Core::System::GetInstance().GetJitInterface().ToggleProfilingState();
 }

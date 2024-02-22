@@ -5,8 +5,12 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <optional>
 #include <string>
 #include <unordered_set>
+#include "Common/Logging/Log.h"
+#include "Core/PowerPC/JitCommon/JitCache.h"
+#include "Core/PowerPC/PPCTables.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -95,7 +99,42 @@ void JitInterface::SetProfilingState(ProfilingState state)
   if (!m_jit)
     return;
 
-  m_jit->jo.profile_blocks = state == ProfilingState::Enabled;
+  if (state == ProfilingState::Disabled)
+  {
+    m_jit->jo.profile_blocks = false;
+    return;
+  }
+
+  m_jit->jo.profile_blocks = true;
+  if (state == ProfilingState::FrameHeat)
+    m_jit->jo.profile_frame_heat = true;
+
+  return;
+}
+
+std::string JitInterface::GetProfilingState() const
+{
+  if (!m_jit)
+    return "no emulation";
+  if (m_jit->jo.profile_blocks == false)
+    return "inactive";
+  if (m_jit->jo.profile_frame_heat)
+    return "frame heat";
+  if (m_jit->jo.profile_blocks)
+    return "active";
+
+  return "error";
+}
+
+void JitInterface::ToggleProfilingState()
+{
+  if (!m_jit)
+    return;
+  auto new_status = (m_jit->jo.profile_blocks == false) ? JitInterface::ProfilingState::FrameHeat :
+                                                          JitInterface::ProfilingState::Disabled;
+
+  SetProfilingState(new_status);
+  return;
 }
 
 void JitInterface::UpdateMembase()
@@ -166,16 +205,29 @@ void JitInterface::GetProfileResults(Profiler::ProfileStats* prof_stats) const
       const auto& data = block.profile_data;
       u64 cost = data.downcountCounter;
       u64 timecost = data.ticCounter;
+      auto heat = data.frameHeatMap;
       // Todo: tweak.
       if (data.runCount >= 1)
         prof_stats->block_stats.emplace_back(block.effectiveAddress, cost, timecost, data.runCount,
-                                             block.codeSize);
+                                             block.codeSize, heat);
       prof_stats->cost_sum += cost;
       prof_stats->timecost_sum += timecost;
     });
 
     sort(prof_stats->block_stats.begin(), prof_stats->block_stats.end());
   });
+}
+
+std::optional<FrameHeatMapPtr> JitInterface::GetFrameHeat(u32 addr)
+{
+  auto msr = m_system.GetPPCState().msr.Hex;
+  auto block = m_jit->GetBlockCache()->GetBlockFromStartAddress(addr, msr);
+  if (!block)
+  {
+    return std::nullopt;
+  }
+  return block->profile_data.frameHeatMap ? std::make_optional(block->profile_data.frameHeatMap) :
+                                            std::nullopt;
 }
 
 std::variant<JitInterface::GetHostCodeError, JitInterface::GetHostCodeResult>

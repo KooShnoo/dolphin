@@ -22,10 +22,15 @@
 #include "Core/Debugger/OSThread.h"
 #include "Core/HW/DSP.h"
 #include "Core/PatchEngine.h"
+#include "Core/PowerPC/FrameHeat.h"
+#include "Core/PowerPC/JitInterface.h"
 #include "Core/PowerPC/MMU.h"
 #include "Core/PowerPC/PPCSymbolDB.h"
 #include "Core/PowerPC/PowerPC.h"
 #include "Core/System.h"
+
+// #include "DolphinQt/Settings.h"
+// #include <QColor>
 
 void ApplyMemoryPatch(const Core::CPUThreadGuard& guard, Common::Debug::MemoryPatch& patch,
                       bool store_existing_value)
@@ -429,6 +434,11 @@ u32 PPCDebugInterface::GetColor(const Core::CPUThreadGuard* guard, u32 address) 
   if (symbol->type != Common::Symbol::Type::Function)
     return 0xEEEEFF;
 
+  // total times this function executed while Frame Heat profiling was active
+  auto totalHeat = FrameHeatMap::GetFuncFHMap().has_value() ?
+                       (*FrameHeatMap::GetFuncFHMap().value())[symbol->address].TotalHeat() :
+                       0;
+
   static constexpr std::array<u32, 6> colors{
       0xd0FFFF,  // light cyan
       0xFFd0d0,  // light red
@@ -437,7 +447,7 @@ u32 PPCDebugInterface::GetColor(const Core::CPUThreadGuard* guard, u32 address) 
       0xd0FFd0,  // light green
       0xFFFFd0,  // light yellow
   };
-  return colors[symbol->index % colors.size()];
+  return FrameHeatMap::HeatToColor(totalHeat, colors[symbol->index % colors.size()]);
 }
 // =============
 

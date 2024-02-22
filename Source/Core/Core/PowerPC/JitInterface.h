@@ -9,6 +9,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Core/MachineContext.h"
+#include "Core/PowerPC/JitCommon/JitCache.h"
 
 class CPUCoreBase;
 class PointerWrap;
@@ -46,6 +47,7 @@ public:
   // Debugging
   enum class ProfilingState
   {
+    FrameHeat,
     Enabled,
     Disabled
   };
@@ -63,8 +65,11 @@ public:
 
   void UpdateMembase();
   void SetProfilingState(ProfilingState state);
+  std::string GetProfilingState() const;
+  void ToggleProfilingState();
   void WriteProfileResults(const std::string& filename) const;
   void GetProfileResults(Profiler::ProfileStats* prof_stats) const;
+  std::optional<FrameHeatMapPtr> GetFrameHeat(u32 addr);
   std::variant<GetHostCodeError, GetHostCodeResult> GetHostCode(u32 address) const;
 
   // Memory Utilities
@@ -100,7 +105,7 @@ public:
 
   void Shutdown();
 
-private:
   std::unique_ptr<JitBase> m_jit;
+private:
   Core::System& m_system;
 };

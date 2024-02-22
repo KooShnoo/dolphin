@@ -16,8 +16,10 @@
 #include <vector>
 
 #include "Common/CommonTypes.h"
+#include "Common/SymbolDB.h"
 #include "Core/HW/Memmap.h"
 #include "Core/PowerPC/Gekko.h"
+#include "Core/PowerPC/FrameHeat.h"
 
 class JitBase;
 
@@ -91,6 +93,8 @@ struct JitBlock : public JitBlockData
     u64 runCount;
     u64 ticStart;
     u64 ticStop;
+    Common::Symbol* funPtr;
+    FrameHeatMapPtr frameHeatMap;
   } profile_data = {};
 };
 
@@ -150,6 +154,8 @@ public:
 
   JitBlock* AllocateBlock(u32 em_address);
   void FinalizeBlock(JitBlock& block, bool block_link, const std::set<u32>& physical_addresses);
+
+  auto test(Common::Symbol sym);
 
   // Look for the block in the slow but accurate way.
   // This function shall be used if FastLookupIndexForAddress() failed.

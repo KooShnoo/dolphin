@@ -901,6 +901,14 @@ bool Jit64::DoJit(u32 em_address, JitBlock* b, u32 nextPC)
   // Conditionally add profiling code.
   if (jo.profile_blocks)
   {
+    // if (jo.profile_frame_heat && !FrameHeatMap::magama_fns.contains(b->profile_data.funPtr->name))
+    if (jo.profile_frame_heat)
+    {
+      // SLOW SLOW LAG MACHINE
+      ABI_PushRegistersAndAdjustStack({}, 0);
+      ABI_CallFunctionP(AddPerformanceFrame, b);
+      ABI_PopRegistersAndAdjustStack({}, 0);
+    }
     // get start tic
     MOV(64, R(ABI_PARAM1), ImmPtr(&b->profile_data.ticStart));
     int offset = static_cast<int>(offsetof(JitBlock::ProfileData, runCount)) -

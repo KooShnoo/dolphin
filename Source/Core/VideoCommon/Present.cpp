@@ -7,6 +7,8 @@
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/HW/VideoInterface.h"
 #include "Core/Host.h"
+#include "Core/PowerPC/JitInterface.h"
+#include "Core/PowerPC/JitCommon/JitBase.h"
 #include "Core/System.h"
 
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
@@ -175,6 +177,11 @@ void Presenter::ViSwap(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height,
   else
   {
     present_info.frame_count = m_frame_count++;
+    // cache new profile data locations for the new frame, if we're profiling frame heat data
+    if (Core::System::GetInstance().GetJitInterface().m_jit.get()->jo.profile_frame_heat)
+    {
+      // FrameHeatMap::AddNewFrame(m_frame_count);
+    }
     present_info.reason = PresentInfo::PresentReason::VideoInterface;
   }
 

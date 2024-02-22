@@ -8,11 +8,14 @@
 #include <cstring>
 #include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include "Common/CommonTypes.h"
 #include "Common/JitRegister.h"
+#include "Common/SymbolDB.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Core.h"
 #include "Core/PowerPC/JitCommon/JitBase.h"
@@ -151,16 +154,24 @@ void JitBaseBlockCache::FinalizeBlock(JitBlock& block, bool block_link,
   }
 
   Common::Symbol* symbol = nullptr;
-  if (Common::JitRegister::IsEnabled() &&
-      (symbol = g_symbolDB.GetSymbolFromAddr(block.effectiveAddress)) != nullptr)
+  if (Common::JitRegister::IsEnabled() || m_jit.jo.profile_frame_heat) 
+    symbol = g_symbolDB.GetSymbolFromAddr(block.effectiveAddress);
+
+  if (m_jit.jo.profile_frame_heat)
   {
-    Common::JitRegister::Register(block.normalEntry, block.codeSize, "JIT_PPC_{}_{:08x}",
-                                  symbol->function_name.c_str(), block.physicalAddress);
+    block.profile_data.frameHeatMap = std::make_shared<FrameHeatMap>();
+    if (symbol)
+        block.profile_data.funPtr = symbol;
   }
-  else
+
+  if (Common::JitRegister::IsEnabled())
   {
-    Common::JitRegister::Register(block.normalEntry, block.codeSize, "JIT_PPC_{:08x}",
-                                  block.physicalAddress);
+    if (symbol)
+      Common::JitRegister::Register(block.normalEntry, block.codeSize, "JIT_PPC_{}_{:08x}",
+                                      symbol->function_name.c_str(), block.physicalAddress);
+    else
+      Common::JitRegister::Register(block.normalEntry, block.codeSize, "JIT_PPC_{:08x}",
+                                    block.physicalAddress);
   }
 }
 

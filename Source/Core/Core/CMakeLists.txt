@@ -499,6 +499,8 @@ add_library(core
   PowerPC/JitCommon/JitCache.h
   PowerPC/JitInterface.cpp
   PowerPC/JitInterface.h
+  PowerPC/FrameHeat.cpp
+  PowerPC/FrameHeat.h
   PowerPC/GDBStub.cpp
   PowerPC/GDBStub.h
   PowerPC/MMU.cpp

@@ -85,6 +85,7 @@ protected:
     bool fp_exceptions;
     bool div_by_zero_exceptions;
     bool profile_blocks;
+    bool profile_frame_heat;
   };
   struct JitState
   {

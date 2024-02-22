@@ -8,13 +8,14 @@
 #include <vector>
 
 #include "Common/CommonTypes.h"
+#include "Core/PowerPC/FrameHeat.h"
 
 namespace Profiler
 {
 struct BlockStat
 {
-  BlockStat(u32 _addr, u64 c, u64 ticks, u64 run, u32 size)
-      : addr(_addr), cost(c), tick_counter(ticks), run_count(run), block_size(size)
+  BlockStat(u32 _addr, u64 c, u64 ticks, u64 run, u32 size, FrameHeatMapPtr hm)
+      : addr(_addr), cost(c), tick_counter(ticks), run_count(run), block_size(size), frameHeatMap(hm)
   {
   }
   u32 addr;
@@ -22,6 +23,7 @@ struct BlockStat
   u64 tick_counter;
   u64 run_count;
   u32 block_size;
+  FrameHeatMapPtr frameHeatMap;
 
   bool operator<(const BlockStat& other) const { return cost > other.cost; }
 };

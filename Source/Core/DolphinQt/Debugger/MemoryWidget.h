@@ -61,6 +61,11 @@ private:
   void OnSearchAddress();
   void OnFindNextValue();
   void OnFindPreviousValue();
+  void OnToggleProfiling();
+  void OnWriteProfile();
+  void OnMakeFuncfhMaps();
+
+  void UpdateProfilingStatus();
 
   void OnSetValue();
   void OnSetValueFromFile();
@@ -107,4 +112,10 @@ private:
   QRadioButton* m_bp_read_only;
   QRadioButton* m_bp_write_only;
   QCheckBox* m_bp_log_check;
+
+  // ks_test
+  // u32 m_frame_count;
+  QPushButton* m_toggle_prof;
+  QPushButton* m_write_prof;
+  QPushButton* m_make_funcfh_maps;
 };

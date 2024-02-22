@@ -8,9 +8,11 @@
 #include <cstdint>
 
 #include "Common/CommonTypes.h"
+#include "Core/PowerPC/JitCommon/JitCache.h"
 
 typedef u64 LARGE_INTEGER;
 bool QueryPerformanceCounter(u64* out);
 bool QueryPerformanceFrequency(u64* lpFrequency);
+void AddPerformanceFrame(JitBlock* prof_data);
 
 #endif
