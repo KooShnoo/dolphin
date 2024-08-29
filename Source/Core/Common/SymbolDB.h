@@ -50,7 +50,8 @@ struct Symbol
   u32 address = 0;
   u32 flags = 0;
   u32 size = 0;
-  int num_calls = 0;
+  u32 num_calls = 0;
+  u32 num_calls_this_frame = 0; // used for framewsie fucntion watcjh only, and only updated when functionwathc is active
   Type type = Type::Function;
   int index = 0;  // only used for coloring the disasm view
   bool analyzed = false;
@@ -69,7 +70,9 @@ enum
 class SymbolDB
 {
 public:
+  // maps ppc address to symbol
   using XFuncMap = std::map<u32, Symbol>;
+  // maps a function's hash to all symbols with that hash
   using XFuncPtrMap = std::map<u32, std::set<Symbol*>>;
 
   SymbolDB();

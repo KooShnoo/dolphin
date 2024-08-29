@@ -38,5 +38,4 @@ public:
 
   void PrintCalls(u32 funcAddr) const;
   void PrintCallers(u32 funcAddr) const;
-  void LogFunctionCall(u32 addr);
 };

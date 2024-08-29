@@ -185,16 +185,6 @@ void PPCSymbolDB::PrintCallers(u32 funcAddr) const
   }
 }
 
-void PPCSymbolDB::LogFunctionCall(u32 addr)
-{
-  auto iter = m_functions.find(addr);
-  if (iter == m_functions.end())
-    return;
-
-  Common::Symbol& f = iter->second;
-  f.num_calls++;
-}
-
 // The use case for handling bad map files is when you have a game with a map file on the disc,
 // but you can't tell whether that map file is for the particular release version used in that game,
 // or when you know that the map file is not for that build, but perhaps half the functions in the

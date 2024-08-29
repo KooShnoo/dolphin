@@ -36,7 +36,7 @@ void SymbolDB::List()
 {
   for (const auto& func : m_functions)
   {
-    DEBUG_LOG_FMT(OSHLE, "{} @ {:08x}: {} bytes (hash {:08x}) : {} calls", func.second.name,
+    DEBUG_LOG_FMT(OSHLE, "{} @ {:08x}: {} bytes (hash {:08x}) : {} calls (only counts if function watch enabled)", func.second.name,
                   func.second.address, func.second.size, func.second.hash, func.second.num_calls);
   }
   INFO_LOG_FMT(OSHLE, "{} functions known in this program above.", m_functions.size());

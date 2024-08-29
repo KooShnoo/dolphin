@@ -20,6 +20,7 @@
 #include <QWidget>
 
 #include "Common/Event.h"
+#include "Common/Logging/Log.h"
 #include "Core/Core.h"
 #include "Core/Debugger/Debugger_SymbolMap.h"
 #include "Core/HW/CPU.h"
@@ -107,6 +108,8 @@ void CodeWidget::CreateWidgets()
 
   m_search_address = new QLineEdit;
   m_branch_watch = new QPushButton(tr("Branch Watch"));
+  m_function_watch = new QPushButton(tr("Framewise Function Watch"));
+  m_fw_clr = new QPushButton(tr("Clear Magma Functions"));
   m_code_view = new CodeViewWidget;
 
   m_search_address->setPlaceholderText(tr("Search Address"));
@@ -151,6 +154,8 @@ void CodeWidget::CreateWidgets()
 
   layout->addWidget(m_search_address, 0, 0);
   layout->addWidget(m_branch_watch, 0, 2);
+  layout->addWidget(m_function_watch, 0, 3);
+  layout->addWidget(m_fw_clr, 0, 4);
   layout->addWidget(m_code_splitter, 1, 0, -1, -1);
 
   QWidget* widget = new QWidget(this);
@@ -181,6 +186,8 @@ void CodeWidget::ConnectWidgets()
   connect(m_search_callstack, &QLineEdit::textChanged, this, &CodeWidget::UpdateCallstack);
 
   connect(m_branch_watch, &QPushButton::pressed, this, &CodeWidget::OnBranchWatchDialog);
+  connect(m_function_watch, &QPushButton::pressed, this, &CodeWidget::OnFunctionWatchDialog);
+  connect(m_fw_clr, &QPushButton::pressed, this, &CodeWidget::OnFWclr);
 
   connect(m_symbols_list, &QListWidget::itemPressed, this, &CodeWidget::OnSelectSymbol);
   connect(m_callstack_list, &QListWidget::itemPressed, this, &CodeWidget::OnSelectCallstack);
@@ -197,6 +204,20 @@ void CodeWidget::ConnectWidgets()
   connect(m_code_view, &CodeViewWidget::RequestPPCComparison, this,
           &CodeWidget::RequestPPCComparison);
   connect(m_code_view, &CodeViewWidget::ShowMemory, this, &CodeWidget::ShowMemory);
+}
+
+void CodeWidget::OnFunctionWatchDialog() {
+  auto& fwfw = m_system.GetPowerPC().GetFunctionWatch();
+  if (fwfw.Enabled()) {
+    fwfw.Dump(m_system);
+  } else {
+    fwfw.Enable();
+  }
+}
+
+void CodeWidget::OnFWclr() {
+  auto& fwfw = m_system.GetPowerPC().GetFunctionWatch();
+  NOTICE_LOG_FMT(POWERPC, "there aer {} magma fns", fwfw.MagmaCount());
 }
 
 void CodeWidget::OnBranchWatchDialog()

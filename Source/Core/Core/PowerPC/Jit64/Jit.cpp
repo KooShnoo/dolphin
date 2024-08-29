@@ -9,6 +9,7 @@
 
 #include <disasm.h>
 #include <fmt/format.h>
+#include "Common/SymbolDB.h"
 
 // for the PROFILER stuff
 #ifdef _WIN32
@@ -960,6 +961,35 @@ bool Jit64::DoJit(u32 em_address, JitBlock* b, u32 nextPC)
     if (i == (code_block.m_num_instructions - 1))
     {
       js.isLastInstruction = true;
+    }
+
+    // Conditionally insert function-tracing code for the Framewise Function Watch Tool
+    if (IsFuncWatchEnabled())
+    {
+      auto& ppc_symbol_db = m_system.GetPPCSymbolDB();
+      if (!ppc_symbol_db.IsEmpty())
+      {
+        auto it = ppc_symbol_db.AccessSymbols().find(op.address);
+        // whether this instruction is at the start address of a function
+        bool isFunction = it != ppc_symbol_db.Symbols().end();
+        if (isFunction && !m_function_watch.IsMagma(op.address))
+        {
+          Common::Symbol& functionSymbol = it->second;
+          Core::FunctionWatch::n_tracing++;
+          // the PPCSymbolDB has a stable spot in memory right? i suppose if it gets moved somwhoe it might break this
+          // I think its contents are in danger of being reallocated at a new memory address if you add symbols. 
+          // But at long as you don't change what symbols are in there, it should be stable
+          // this asm should perform `functionSymbol.num_calls_this_frame++;`
+          MOV(64, R(RSCRATCH), ImmPtr(&functionSymbol.num_calls_this_frame));
+          ADD(32, MatR(RSCRATCH), Imm32(1));
+        }
+      }
+      else
+      {
+        NOTICE_LOG_FMT(POWERPC,
+                       "empty ppcsymbolDB!!! for jitblock @ 0x{:x} must generate symbols first!!!",
+                       b->effectiveAddress);
+      }
     }
 
     if (i != 0)

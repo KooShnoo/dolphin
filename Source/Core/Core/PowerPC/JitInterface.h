@@ -57,6 +57,7 @@ public:
 
   void UpdateMembase();
   void JitBlockLogDump(const Core::CPUThreadGuard& guard, std::FILE* file) const;
+  void FuncWatchDump(const Core::CPUThreadGuard& guard, std::FILE* file) const;
   std::variant<GetHostCodeError, GetHostCodeResult> GetHostCode(u32 address) const;
 
   // Memory Utilities

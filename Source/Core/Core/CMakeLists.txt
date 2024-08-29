@@ -63,6 +63,8 @@ add_library(core
   CPUThreadConfigCallback.h
   Debugger/BranchWatch.cpp
   Debugger/BranchWatch.h
+  Debugger/FunctionWatch.cpp
+  Debugger/FunctionWatch.h
   Debugger/CodeTrace.cpp
   Debugger/CodeTrace.h
   Debugger/DebugInterface.h
